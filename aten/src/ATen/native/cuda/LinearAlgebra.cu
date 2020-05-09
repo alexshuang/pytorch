@@ -144,7 +144,11 @@ Tensor& mm_out_cuda(Tensor& result, const Tensor& self, const Tensor& mat2) {
 }
 
 Tensor mm_cuda(const Tensor& self, const Tensor& mat2) {
-  Tensor result = at::empty({ self.size(0), mat2.size(1) }, self.options());
+  Tensor result;
+  if (self.stride(0) == self.size(1) || mat2.stride(0) == mat2.size(1))
+	result = at::empty({ self.size(0), mat2.size(1) }, self.options());
+  else
+    result = at::empty({ self.size(0), mat2.stride(0) }, self.options()).narrow(1, 0, mat2.size(1));
   return addmm_out_cuda_impl(result, result, self, mat2, 0, 1);
 }
 

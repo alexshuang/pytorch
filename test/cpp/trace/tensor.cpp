@@ -20,11 +20,13 @@ static void sgemm(void)
 static void stried_sgemm(void)
 {
   auto a = torch::randn({SEQ_LEN, EMBEDDING_SIZE + STRIDE}).to(torch::kCUDA);
-  a = a.set_(a.storage(), 0, {SEQ_LEN, EMBEDDING_SIZE}, a.strides());
   auto b = torch::randn({EMBEDDING_SIZE, HIDDEN_SIZE + STRIDE}).to(torch::kCUDA);
-  b = b.set_(b.storage(), 0, {EMBEDDING_SIZE, HIDDEN_SIZE}, b.strides());
+  a = a.narrow(-1, 0, EMBEDDING_SIZE);
+  b = b.narrow(-1, 0, HIDDEN_SIZE);
+  cout << "A sizes: " << a.sizes() << ", B sizes: " << b.sizes() << endl;
+  cout << "A strides: " << a.strides() << ", B strides: " << b.strides() << endl;
   auto c = torch::matmul(a, b);
-  cout << c.sizes() << endl;
+  cout << "C sizes: " << c.sizes() << ", C strides: " << c.strides() << endl;
 }
 
 static void boardcast_sgemm(void)

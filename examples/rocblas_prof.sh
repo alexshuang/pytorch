@@ -5,12 +5,19 @@ if [ $# -le 0 ]; then
 	exit 1
 fi
 
-FNAME=${1%.*}
-LOG_DIR=out/$FNAME
+FNAME=${1##*/}
+BASENAME=${FNAME%.*}
+LOG_DIR=out/$BASENAME
 
 mkdir -p $LOG_DIR
 
 export ROCBLAS_LAYER=2
-export ROCBLAS_LOG_BENCH_PATH=$LOG_DIR/$FNAME.csv
+export ROCBLAS_LOG_BENCH_PATH=$LOG_DIR/result.csv
 
-python3.6 $1 && cat $ROCBLAS_LOG_BENCH_PATH
+SUFFIX=${1##*.}
+if [ $SUFFIX = py ]; then
+	CMD=python3.6
+elif [ $SUFFIX = sh ]; then
+	CMD=sh
+fi
+$CMD $1 && cat $ROCBLAS_LOG_BENCH_PATH
