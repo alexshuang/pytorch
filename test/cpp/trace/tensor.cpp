@@ -2,12 +2,14 @@
 #include <iostream>
 
 using namespace std;
+using namespace torch::nn;
+namespace F = torch::nn::functional;
 
-#define BS		12
-#define SEQ_LEN		512
+#define BS				12
+#define SEQ_LEN			512
 #define EMBEDDING_SIZE	300
-#define HIDDEN_SIZE	1024
-#define STRIDE	32
+#define HIDDEN_SIZE		1024
+#define STRIDE			32
 
 static void sgemm(void)
 {
@@ -45,10 +47,29 @@ static void hgemm(void)
   cout << c.sizes() << endl;
 }
 
+static void simple_nn(void)
+{
+  auto x = torch::randn({SEQ_LEN, EMBEDDING_SIZE}).to(torch::kCUDA);
+  auto l = Linear(EMBEDDING_SIZE, HIDDEN_SIZE);
+  l->to({torch::kCUDA, 0});
+
+  for (auto& p : l->parameters()) {
+	auto last_dim = p.data().sizes().size() - 1;
+	p.data().copy_(F::pad(p.data(), F::PadFuncOptions({0, STRIDE}).mode(torch::kConstant).value(0)));//#.narrow(last_dim, 0, t.size(last_dim));
+	cout << "p size: " << p.data().sizes() << ", p stride: " << p.data().strides() << endl;
+  }
+
+/*
+  auto y = l(x);
+  cout << "C sizes: " << y.sizes() << ", C strides: " << y.strides() << endl;
+*/
+}
+
 int main(void)
 {
-  stried_sgemm();
+  simple_nn();
+  //stried_sgemm();
   //sgemm();
-//  boardcast_sgemm();
+  //boardcast_sgemm();
   return 0;
 }
