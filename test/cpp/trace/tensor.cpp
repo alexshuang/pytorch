@@ -50,24 +50,32 @@ static void hgemm(void)
 static void simple_nn(void)
 {
   auto x = torch::randn({SEQ_LEN, EMBEDDING_SIZE}).to(torch::kCUDA);
-  auto l = Linear(EMBEDDING_SIZE, HIDDEN_SIZE);
+  Linear l(LinearOptions(EMBEDDING_SIZE, HIDDEN_SIZE).bias(false));
   l->to({torch::kCUDA, 0});
 
+/*
   for (auto& p : l->parameters()) {
 	auto last_dim = p.data().sizes().size() - 1;
-	p.data().copy_(F::pad(p.data(), F::PadFuncOptions({0, STRIDE}).mode(torch::kConstant).value(0)));//#.narrow(last_dim, 0, t.size(last_dim));
+	p.data().copy_(F::pad(p.data(), F::PadFuncOptions({0, STRIDE}).mode(torch::kConstant).value(0)).narrow(last_dim, 0, t.size(last_dim)));
 	cout << "p size: " << p.data().sizes() << ", p stride: " << p.data().strides() << endl;
   }
+*/
 
-/*
   auto y = l(x);
   cout << "C sizes: " << y.sizes() << ", C strides: " << y.strides() << endl;
-*/
+}
+
+static void linear(void)
+{
+  auto x = torch::randn({SEQ_LEN, EMBEDDING_SIZE}).to(torch::kCUDA);
+  auto l = Linear(EMBEDDING_SIZE, HIDDEN_SIZE);
+  l->to(torch::kCUDA);
+  auto y = l(x);
 }
 
 int main(void)
 {
-  simple_nn();
+  linear();
   //stried_sgemm();
   //sgemm();
   //boardcast_sgemm();
