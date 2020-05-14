@@ -144,7 +144,21 @@ Tensor& mm_out_cuda(Tensor& result, const Tensor& self, const Tensor& mat2) {
 }
 
 Tensor mm_cuda(const Tensor& self, const Tensor& mat2) {
-  Tensor result = at::empty({ self.size(0), mat2.size(1) }, self.options());
+  Tensor result;
+#ifdef __HIP_PLATFORM_HCC__
+  char transpose_m1, transpose_m2;
+  int m1_paddings, m2_paddings;
+
+  transpose_m1 = (self.stride(1) == 1 && self.stride(0) != 0) ? 'n' : 't';
+  transpose_m2 = (mat2.stride(1) == 1 && mat2.stride(0) != 0) ? 'n' : 't';
+  m1_paddings = self.stride((transpose_m1 == 'n' ? 0 : 1)) - self.size((transpose_m1 == 'n' ? 1 : 0));
+  m2_paddings = mat2.stride((transpose_m2 == 'n' ? 0 : 1)) - mat2.size((transpose_m2 == 'n' ? 1 : 0));
+
+  if (m1_paddings > 0 && m1_paddings == m2_paddings)
+    result = at::empty({ self.size(0), mat2.size(1) + m1_paddings }, self.options()).narrow(1, 0, mat2.size(1));
+  else
+#endif
+    result = at::empty({ self.size(0), mat2.size(1) }, self.options());
   return addmm_out_cuda_impl(result, result, self, mat2, 0, 1);
 }
 
