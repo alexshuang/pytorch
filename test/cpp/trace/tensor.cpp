@@ -43,7 +43,7 @@ static void hgemm(void)
 {
   auto a = torch::ones({SEQ_LEN, EMBEDDING_SIZE}, torch::kFloat16).to(torch::kCUDA);
   auto b = torch::ones({EMBEDDING_SIZE, HIDDEN_SIZE}, torch::kFloat16).to(torch::kCUDA);
-  auto c = torch::matmul(a, b);
+  auto c = a.matmul(b);
   cout << c.sizes() << endl;
 }
 
@@ -75,7 +75,8 @@ static void linear(void)
 
 int main(void)
 {
-  linear();
+  hgemm();
+  //linear();
   //stried_sgemm();
   //sgemm();
   //boardcast_sgemm();
