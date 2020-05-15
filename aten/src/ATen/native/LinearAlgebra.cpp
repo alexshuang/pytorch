@@ -388,8 +388,22 @@ Tensor matmul(
       output_size.push_back(size2[dim_tensor2 - 1]);
     }
 
+    char transpose_t1, transpose_t2;
+    int64_t t1_paddings, t2_paddings;
+    Tensor t1;
+
+    transpose_t1 = (tensor1.stride(2) == 1 && tensor1.stride(1) != 0) ? 'n' : 't';
+    transpose_t2 = (t2.stride(1) == 1 && t2.stride(0) != 0) ? 'n' : 't';
+    t1_paddings = tensor1.stride((transpose_t1 == 'n' ? 1 : 2)) - tensor1.size((transpose_t1 == 'n' ? 2 : 1));
+    t2_paddings = tensor2.stride((transpose_t2 == 'n' ? 0 : 1)) - tensor2.size((transpose_t2 == 'n' ? 1 : 0));
+
     // fold the batch into the first dimension
-    Tensor t1 = tensor1.contiguous().view({-1, size1[size1.size() - 1]});
+    if (t1_paddings > 0 && t1_paddings == t2_paddings) {
+      // fixme: check there are no paddings in dim0.
+      t1 = tensor1.view({-1, size1[size1.size() - 1]});
+    } else {
+      t1 = tensor1.contiguous().view({-1, size1[size1.size() - 1]});
+    }
     Tensor output = has_out ? at::_unsafe_view(at::mm_out(out, t1, t2), output_size)
                             : at::_unsafe_view(t1.mm(t2), output_size);
     return has_out ? out.set_(output) : output;
