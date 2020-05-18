@@ -156,7 +156,7 @@ Tensor mm_cuda(const Tensor& self, const Tensor& mat2) {
   m2_paddings = mat2.stride((transpose_m2 == 'n' ? 0 : 1)) - mat2.size((transpose_m2 == 'n' ? 1 : 0));
   
   mat2_size_1 = (m1_paddings > 0 && m1_paddings == m2_paddings) ? mat2.size(1) + m1_paddings : mat2.size(1);
-  if (self.type().scalar_type_ == c10::ScalarType::Half) {
+  if (self.scalar_type() == c10::ScalarType::Half) {
     mat2_size_1 *= 2;
   }
 
