@@ -458,7 +458,35 @@ Tensor matmul(
     std::vector<int64_t> tensor2_bmm_view({expand_batch_product});
     tensor2_bmm_view.insert(tensor2_bmm_view.end(), {m2, p});
 
+    char transpose_t1, transpose_t2;
+    int64_t t1_paddings, t2_paddings;
+    Tensor t1;
+
+    transpose_t1 = (tensor1.stride(-1) == 1 && tensor1.stride(-2) != 0) ? 'n' : 't';
+    transpose_t2 = (tensor2.stride(-1) == 1 && tensor2.stride(-2) != 0) ? 'n' : 't';
+    t1_paddings = tensor1.stride((transpose_t1 == 'n' ? -2 : -1)) - tensor1.size((transpose_t1 == 'n' ? -1 : -2));
+    t2_paddings = tensor2.stride((transpose_t2 == 'n' ? -2 : -1)) - tensor2.size((transpose_t2 == 'n' ? -1 : -2));
+
     // flatten expanded batches
+#if 0
+/*
+    Tensor tensor1_expanded;
+    Tensor tensor2_expanded;
+    int64_t padded_size = p;
+    tensor1_expanded = tensor1.expand(tensor1_expand_size);
+    tensor1_expanded = tensor1_expanded.contiguous();
+    tensor1_expanded = tensor1_expanded.view(tensor1_bmm_view);
+    if (t1_paddings > 0 && t1_paddings == t2_paddings) {
+      // fixme: check there are no paddings in dim0.
+      tensor1_expanded = tensor1.expand(tensor1_expand_size).view(tensor1_bmm_view);
+      tensor2_expanded = tensor2.expand(tensor2_expand_size).view(tensor2_bmm_view);
+      padded_size += t1_paddings;
+    } else {
+      tensor1_expanded = tensor1.expand(tensor1_expand_size).contiguous().view(tensor1_bmm_view);
+      tensor2_expanded = tensor2.expand(tensor2_expand_size).contiguous().view(tensor2_bmm_view);
+    }
+*/
+#endif
     Tensor tensor1_expanded = tensor1.expand(tensor1_expand_size).contiguous().view(tensor1_bmm_view);
     Tensor tensor2_expanded = tensor2.expand(tensor2_expand_size).contiguous().view(tensor2_bmm_view);
 
@@ -471,8 +499,22 @@ Tensor matmul(
       output_shape.push_back(p);
     }
 
+#if 0
+	if (has_out) {
+        out.resize_({ tensor1_bmm_view[0], tensor1_bmm_view[1], padded_size}).narrow(-1, 0, p);
+    } else {
+        out = at::empty({ tensor1_bmm_view[0], tensor1_bmm_view[1], padded_size}, tensor1.options()).narrow(-1, 0, p);
+    }
+
+    Tensor output = at::_unsafe_view(at::bmm_out(out, tensor1_expanded, tensor2_expanded), output_shape);
+/*
     Tensor output = has_out ? at::_unsafe_view(at::bmm_out(out, tensor1_expanded, tensor2_expanded), output_shape)
                             : at::_unsafe_view(tensor1_expanded.bmm(tensor2_expanded), output_shape);
+*/
+#else
+    Tensor output = has_out ? at::_unsafe_view(at::bmm_out(out, tensor1_expanded, tensor2_expanded), output_shape)
+                            : at::_unsafe_view(tensor1_expanded.bmm(tensor2_expanded), output_shape);
+#endif
 
     return has_out ? out.set_(output) : output;
   }

@@ -197,6 +197,34 @@ AT_FORALL_SCALAR_TYPES_AND3(Bool, Half, BFloat16, DEFINE_CAST_OP)
 
 #undef DEFINE_CAST_OP
 
+int get_paddings(const Tensor& self) {
+  std::vector<int64_t> sizes(self.sizes().vec());
+  std::vector<int64_t> strides(self.strides().vec());
+  int paddings = 0;
+  int n = sizes.size();
+  int64_t acc = 1;
+
+  // fixme: the sort function is not pretty enough
+  for (int i = 0; i < n - 1; i++) {
+    for (int j = 0; j < n - 1 - i; j++) {
+      if (strides[j] < strides[j + 1]) {
+        std::swap(strides[j], strides[j + 1]);
+        std::swap(sizes[j], sizes[j + 1]);
+      }
+    }
+  }
+
+  for (int i = n - 2; i >= 0; i--) {
+    acc *= sizes[i + 1];
+    if (strides[i] != acc) {
+      paddings = strides[i] - acc;
+      break;
+    }
+  }
+
+  return paddings;
+}
+
 Tensor empty_like(
     const Tensor& self,
     const TensorOptions& options_,
@@ -287,7 +315,15 @@ Tensor empty_like(
     }
   } else {
     // See Note [Explicit nullopt MemoryFormat argument]
-    result = at::empty(self.sizes(), options.memory_format(memory_format), c10::nullopt);
+    auto paddings = native::get_paddings(self);
+    if (paddings > 0) {
+      std::vector<int64_t> sizes(self.sizes().vec());
+      sizes[sizes.size() - 1] += paddings;
+      auto new_sizes = IntArrayRef(sizes);
+      result = at::empty(new_sizes, options.memory_format(memory_format), c10::nullopt).narrow(-1, 0, self.size(-1));
+    } else {
+      result = at::empty(self.sizes(), options.memory_format(memory_format), c10::nullopt);
+    }
   }
 
   if (self.opt_names()) {
