@@ -101,10 +101,18 @@ static void contiguous(void)
   cout << "a: " << a.sizes() << ", " << a.strides() << endl;
 }
 
+static void rocfft(void)
+{
+  auto x = torch::randn({4, 3, 2}).to(torch::kCUDA);
+  auto res = x.fft(2, false);
+  auto _x = res.ifft(2, false)
+}
+
 int main(void)
 {
+  rocfft();
   //batched_sgemm();
-  contiguous();
+  //contiguous();
   //padding();
   //hgemm();
   //linear();
